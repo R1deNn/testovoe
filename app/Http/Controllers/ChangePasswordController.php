@@ -3,127 +3,69 @@
 namespace App\Http\Controllers;
 
 use App\Models\RecoverCodes;
+use App\Models\SendCodeService;
+use App\Models\ConfirmationCodeService;
+use App\Models\ChangePasswordService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class ChangePasswordController extends Controller
 {
-    const TYPE_EMAIL = '1'; // email
-    const TYPE_TEL = '2'; // tel
-    const TYPE_TELEGRAM = '3'; // tg
+    const TYPE_EMAIL = SendCodeService::TYPE_EMAIL; // email
+    const TYPE_TEL = SendCodeService::TYPE_TEL; // tel
+    const TYPE_TELEGRAM = SendCodeService::TYPE_TELEGRAM; // tg
+    private $sendCodeService;
+    private $confirmationCodeService;
+    private $changePasswordService;
 
-    public function createCode($type)
+    public function __construct(SendCodeService $sendCodeService,
+    ConfirmationCodeService $confirmationCodeService,
+    ChangePasswordService $changePasswordService)
     {
-        $randCode = rand(1111, 9999);
-
-        $code = RecoverCodes::create([
-            'userid' => Auth::id(),
-            'code' => $randCode,
-            'type' => $type
-        ]);
-
-        return $randCode;
+        $this->sendCodeService = $sendCodeService;
+        $this->confirmationCodeService = $confirmationCodeService;
+        $this->changePasswordService = $changePasswordService;
     }
     public function telegram(Request $request)
     {
-        $randCode = $this->createCode(self::TYPE_TELEGRAM);
-
-        if(app('config')->get('app.env') == 'local'){
-            $response = [
-                'code' => $randCode,
-            ];
-            return response()->json($response);
-        }
-        $response = [
-            'code' => 'success',
-        ];
-        return response()->json($response);
+        $code = $this->sendCodeService->createCode(self::TYPE_TELEGRAM, Auth::id());
+        $code = $this->sendCodeService->sendCode(self::TYPE_TELEGRAM, $code, Auth::id());
+        return $code;
     }
 
     public function email(Request $request)
     {
-        $randCode = $this->createCode(self::TYPE_EMAIL);
-
-        if(app('config')->get('app.env') == 'local'){
-            $response = [
-                'code' => $randCode,
-            ];
-            return response()->json($response);
-        }
-        $response = [
-            'code' => 'success',
-        ];
-        return response()->json($response);
+        $code = $this->sendCodeService->createCode(self::TYPE_EMAIL, Auth::id());
+        $code = $this->sendCodeService->sendCode(self::TYPE_EMAIL, $code, Auth::id());
+        return $code;
     }
 
     public function tel(Request $request)
     {
-        $randCode = $this->createCode(self::TYPE_TEL);
-
-        if(app('config')->get('app.env') == 'local'){
-            $response = [
-                'code' => $randCode,
-            ];
-            return response()->json($response);
-        }
-        $response = [
-            'code' => 'success',
-        ];
-        return response()->json($response);
+        $code = $this->sendCodeService->createCode(self::TYPE_TEL, Auth::id());
+        $code = $this->sendCodeService->sendCode(self::TYPE_TEL, $code, Auth::id());
+        return $code;
     }
 
     public function telegramSubmit(Request $request)
     {
-        $code = $request->input('code');
-
-        $codeExists = RecoverCodes::where('code', $code)
-            ->where('created_at', '>=', now()->subMinutes(5))
-            ->where('type', self::TYPE_TELEGRAM)
-            ->where('userid', Auth::id())
-            ->where('status', 0)
-            ->exists();
-
-        return response()->json(['exists' => $codeExists]);
+        $result = $this->confirmationCodeService->confirmationCode(self::TYPE_TELEGRAM, $request->input('code'), Auth::id());
+        return $result;
     }
     public function emailSubmit(Request $request)
     {
-        $code = $request->input('code');
-
-        $codeExists = RecoverCodes::where('code', $code)
-            ->where('created_at', '>=', now()->subMinutes(5))
-            ->where('type', self::TYPE_EMAIL)
-            ->where('userid', Auth::id())
-            ->where('status', 0)
-            ->exists();
-
-        return response()->json(['exists' => $codeExists]);
+        $result = $this->confirmationCodeService->confirmationCode(self::TYPE_EMAIL, $request->input('code'), Auth::id());
+        return $result;
     }
     public function telSubmit(Request $request)
     {
-        $code = $request->input('code');
-
-        $codeExists = RecoverCodes::where('code', $code)
-            ->where('created_at', '>=', now()->subMinutes(5))
-            ->where('type', self::TYPE_TEL)
-            ->where('userid', Auth::id())
-            ->where('status', 0)
-            ->exists();
-
-        return response()->json(['exists' => $codeExists]);
+        $result = $this->confirmationCodeService->confirmationCode(self::TYPE_TEL, $request->input('code'), Auth::id());
+        return $result;
     }
 
     public function changePassword(Request $request)
     {
-        $user = Auth::user();
-        $user->password = Hash::make($request->input('password'));
-        $user->save();
-
-        $code = RecoverCodes::where('userid', Auth::id())
-            ->where('status', 0)
-            ->first();
-        $code->status = 1;
-        $code->save();
+        $this->changePasswordService->changePasswordUser(Auth::id(), $request->input('password'));
 
         return redirect()->back()->with('success', 'Пароль изменен');
     }
