@@ -52,28 +52,26 @@ npm install
 
 cp .env.example .env
 
+4. **Запустите докер**
+5. **Запустите образ приложения:**
+   WIN: ./vendor/bin/sail up -d (WSL)
+   Linux: sail up -d
 
-4. **Запустите миграции**
+6. **Запустите миграции**
 
    Выполните миграции для создания таблиц в базе данных:
+    
+    sail art migrate (linux) <br>
+    ./vendor/bin/sail art migrate (windows wsl)
 
 
-
-php artisan migrate
-
-5**Скомпилируйте фронтенд-ресурсы**
+7. **Скомпилируйте фронтенд-ресурсы**
 
    Скомпилируйте CSS и JavaScript:
 
 
 
 npm run dev
-
-
-6. **Запустите докер**
-7. **Запустите образ приложения:**
-WIN: ./vendor/bin/sail up -d (WSL)
-Linux: sail up -d
 
 
 
